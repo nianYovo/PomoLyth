@@ -1,0 +1,21 @@
+{
+  "C_Cpp.default.configurationProvider": "",
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
+  "C_Cpp.default.compilerPath": "E:/Qt/Tools/mingw1310_64/bin/g++.exe",
+  "C_Cpp.default.cppStandard": "c++17",
+  "C_Cpp.default.intelliSenseMode": "windows-gcc-x64",
+  "C_Cpp.default.includePath": [
+    "${workspaceFolder}",
+    "${workspaceFolder}/build/PomoLyth_autogen/include",
+    "E:/Qt/6.11.0/mingw_64/include",
+    "E:/Qt/6.11.0/mingw_64/include/QtCore",
+    "E:/Qt/6.11.0/mingw_64/include/QtGui",
+    "E:/Qt/6.11.0/mingw_64/include/QtWidgets",
+    "E:/Qt/6.11.0/mingw_64/include/QtSql"
+  ],
+  "C_Cpp.errorSquiggles": "enabled",
+  "files.associations": {
+    "*.h": "cpp",
+    "*.cpp": "cpp"
+  }
+}

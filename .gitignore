@@ -1,0 +1,11 @@
+build/
+build_clean/
+.vs/
+.vscode/ipch/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.user
+*.sqlite
+*.db

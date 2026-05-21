@@ -1,0 +1,9 @@
+{
+  "defaultFocusMinutes": 25,
+  "defaultBreakMinutes": 5,
+  "focusMonitorIntervalSeconds": 3,
+  "aiProvider": "mock",
+  "openAiBaseUrl": "https://api.openai.com/v1",
+  "openAiModel": "gpt-4.1-mini",
+  "openAiApiKeyEnv": "OPENAI_API_KEY"
+}
