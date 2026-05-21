@@ -15,19 +15,19 @@ QStringList AchievementSystem::update(const FocusSession& session, PetProfile& p
     pet.level = 1 + pet.exp / 100;
 
     if (pet.completedPomodoros == 1) {
-        unlock(pet, "First Focus");
+        unlock(pet, "初次专注");
     }
     if (pet.completedPomodoros == 3) {
-        unlock(pet, "Triple Pomodoro");
+        unlock(pet, "三连番茄");
     }
     if (session.distractionCount == 0) {
-        unlock(pet, "Distraction Free");
+        unlock(pet, "分心克星");
     }
     if (pet.totalFocusMinutes >= 120) {
-        unlock(pet, "Strong Day");
+        unlock(pet, "今日很强");
     }
     if (pet.level > oldLevel) {
-        unlock(pet, QString("Level %1").arg(pet.level));
+        unlock(pet, QString("Lv.%1 升级").arg(pet.level));
     }
 
     return m_lastUnlocked;

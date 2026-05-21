@@ -21,5 +21,5 @@ private:
     QColor moodColor() const;
 
     PetMood m_mood = PetMood::Idle;
-    QString m_speech = "Ready for a focus round?";
+    QString m_speech = "准备好开始一轮专注了吗？";
 };

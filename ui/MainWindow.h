@@ -6,6 +6,7 @@
 #include "core/PetStateMachine.h"
 #include "models/FocusTask.h"
 #include "monitor/FocusMonitor.h"
+#include "monitor/InputActivityMonitor.h"
 #include "storage/JsonStorage.h"
 
 class DashboardWindow;
@@ -28,6 +29,7 @@ public:
         SQLiteStorage& storage,
         JsonStorage& jsonStorage,
         FocusMonitor& focusMonitor,
+        InputActivityMonitor& inputActivityMonitor,
         ReviewGenerator& reviewGenerator,
         const AppConfig& config,
         QWidget* parent = nullptr);
@@ -54,6 +56,7 @@ private:
     SQLiteStorage& m_storage;
     JsonStorage& m_jsonStorage;
     FocusMonitor& m_focusMonitor;
+    InputActivityMonitor& m_inputActivityMonitor;
     ReviewGenerator& m_reviewGenerator;
     AppConfig m_config;
     QStringList m_blacklist;

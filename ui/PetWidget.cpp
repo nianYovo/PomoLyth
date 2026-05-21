@@ -5,6 +5,9 @@
 
 PetWidget::PetWidget(QWidget* parent) : QWidget(parent) {
     setMinimumSize(260, 220);
+    setAttribute(Qt::WA_TranslucentBackground);
+    setAttribute(Qt::WA_NoSystemBackground);
+    setAutoFillBackground(false);
 }
 
 void PetWidget::setMood(PetMood mood, const QString& speech) {
@@ -18,18 +21,28 @@ void PetWidget::paintEvent(QPaintEvent* event) {
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::TextAntialiasing);
 
     const QRectF bubbleRect(12, 10, width() - 24, 64);
-    painter.setPen(QPen(QColor("#ccd5c7"), 1));
-    painter.setBrush(QColor("#fbfbf7"));
+    painter.setPen(QPen(QColor(205, 213, 199, 210), 1));
+    painter.setBrush(QColor(255, 255, 250, 225));
     painter.drawRoundedRect(bubbleRect, 8, 8);
     painter.setPen(QColor("#26302a"));
     painter.drawText(bubbleRect.adjusted(12, 8, -12, -8), Qt::TextWordWrap | Qt::AlignVCenter, m_speech);
 
     const QPointF center(width() / 2.0, 142);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor(38, 48, 42, 35));
+    painter.drawEllipse(QPointF(center.x() + 8, center.y() + 50), 62, 12);
+
     painter.setBrush(moodColor());
     painter.setPen(QPen(QColor("#26302a"), 2));
     painter.drawEllipse(center, 62, 54);
+
+    painter.setPen(QPen(QColor("#26302a"), 2));
+    painter.setBrush(moodColor().lighter(110));
+    painter.drawEllipse(QPointF(center.x() - 48, center.y() - 42), 18, 22);
+    painter.drawEllipse(QPointF(center.x() + 48, center.y() - 42), 18, 22);
 
     painter.setBrush(QColor("#26302a"));
     painter.drawEllipse(QPointF(center.x() - 22, center.y() - 8), 5, 7);

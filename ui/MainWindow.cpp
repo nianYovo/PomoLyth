@@ -2,11 +2,14 @@
 
 #include <QApplication>
 #include <QCloseEvent>
+#include <QFrame>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QSplitter>
 #include <QTextEdit>
+#include <QTimer>
 #include <QVBoxLayout>
 #include "ui/DashboardWindow.h"
 #include "ui/PetWidget.h"
@@ -22,6 +25,7 @@ MainWindow::MainWindow(
     SQLiteStorage& storage,
     JsonStorage& jsonStorage,
     FocusMonitor& focusMonitor,
+    InputActivityMonitor& inputActivityMonitor,
     ReviewGenerator& reviewGenerator,
     const AppConfig& config,
     QWidget* parent)
@@ -32,6 +36,7 @@ MainWindow::MainWindow(
       m_storage(storage),
       m_jsonStorage(jsonStorage),
       m_focusMonitor(focusMonitor),
+      m_inputActivityMonitor(inputActivityMonitor),
       m_reviewGenerator(reviewGenerator),
       m_config(config),
       m_blacklist(jsonStorage.loadBlacklist()),
@@ -60,48 +65,58 @@ MainWindow::MainWindow(
 
     connect(&m_sessionManager, &FocusSessionManager::planGenerated, this, &MainWindow::updatePlanView);
     connect(&m_sessionManager, &FocusSessionManager::aiTaskStarted, this, [this](const QString& label) {
-        m_statusLabel->setText(QString("%1 is running...").arg(label));
+        m_statusLabel->setText(QString("%1 正在生成...").arg(label));
     });
     connect(&m_sessionManager, &FocusSessionManager::aiTaskFinished, this, [this](const QString& label) {
-        m_statusLabel->setText(QString("%1 finished.").arg(label));
+        m_statusLabel->setText(QString("%1 已完成。").arg(label));
     });
     connect(&m_sessionManager, &FocusSessionManager::sessionCompleted, this, &MainWindow::showReview);
     connect(&m_sessionManager, &FocusSessionManager::sessionSaved, this, [this](const FocusSession& session, const QStringList& achievements) {
-        QString message = QString("Saved: %1\nAI review: %2").arg(session.task, session.aiSummary);
+        QString message = QString("已保存：%1\nAI 复盘：%2").arg(session.task, session.aiSummary);
         if (!achievements.isEmpty()) {
-            message += QString("\nUnlocked: %1").arg(achievements.join(", "));
+            message += QString("\n解锁成就：%1").arg(achievements.join("、"));
         }
         m_statusLabel->setText(message);
         updatePetProfileView();
-        QMessageBox::information(this, "Session Review", message);
+        QMessageBox::information(this, "本轮复盘", message);
         if (m_dashboard) {
             m_dashboard->refresh();
         }
     });
     connect(&m_sessionManager, &FocusSessionManager::distractionCountChanged, this, [this](int count) {
-        m_statusLabel->setText(QString("Distractions detected: %1").arg(count));
+        m_statusLabel->setText(QString("检测到分心次数：%1").arg(count));
     });
     connect(&m_sessionManager, &FocusSessionManager::breakStarted, this, [this](int minutes) {
-        m_statusLabel->setText(QString("Break started: %1 minutes.").arg(minutes));
+        m_statusLabel->setText(QString("已进入 %1 分钟短休息。").arg(minutes));
     });
     connect(&m_sessionManager, &FocusSessionManager::breakFinished, this, [this]() {
-        m_statusLabel->setText("Break finished. Ready for the next round.");
+        m_statusLabel->setText("短休息结束，可以准备下一轮。");
+    });
+    connect(&m_inputActivityMonitor, &InputActivityMonitor::activityChanged, this, [this](int count, int idleSeconds) {
+        m_statusLabel->setText(QString("键鼠活动：%1 次，当前空闲：%2 秒").arg(count).arg(idleSeconds));
+    });
+    connect(&m_inputActivityMonitor, &InputActivityMonitor::idleWarning, this, [this](int idleSeconds) {
+        m_statusLabel->setText(QString("已经 %1 秒没有键盘或鼠标输入，还在专注吗？").arg(idleSeconds));
     });
     connect(&m_petStateMachine, &PetStateMachine::moodChanged, m_petWidget, &PetWidget::setMood);
+
+    QTimer::singleShot(300, this, [this]() {
+        m_statusLabel->setText(m_statusLabel->text() + " 点击“悬浮桌宠”可显示透明桌面宠物。");
+    });
 }
 
 void MainWindow::buildUi() {
     setWindowTitle("PomoLyth");
-    resize(980, 640);
+    resize(1100, 680);
 
     m_taskInput = new QLineEdit;
-    m_taskInput->setPlaceholderText("Enter this round's task, e.g. review C++ STL vector and map");
+    m_taskInput->setPlaceholderText("输入本轮任务，例如：复习 C++ STL 的 vector 和 map");
 
     m_planView = new QTextEdit;
     m_planView->setReadOnly(true);
-    m_planView->setPlaceholderText("The AI task plan will appear here.");
+    m_planView->setPlaceholderText("AI 任务计划会显示在这里。");
 
-    m_statusLabel = new QLabel(QString("Ready for a focus round? AI provider: %1").arg(m_config.aiProvider));
+    m_statusLabel = new QLabel(QString("准备开始一轮专注。AI Provider：%1").arg(m_config.aiProvider));
     m_statusLabel->setWordWrap(true);
     m_petProfileLabel = new QLabel;
     m_petProfileLabel->setObjectName("petProfileLabel");
@@ -111,41 +126,81 @@ void MainWindow::buildUi() {
     m_petWidget = new PetWidget;
     m_petWidget->setMood(m_petStateMachine.mood(), m_petStateMachine.speechText());
 
-    auto* left = new QWidget;
+    auto* title = new QLabel("PomoLyth");
+    title->setObjectName("appTitle");
+    auto* subtitle = new QLabel("和桌宠一起规划、专注、复盘、成长。");
+    subtitle->setObjectName("appSubtitle");
+
+    auto* taskTitle = new QLabel("当前任务");
+    taskTitle->setObjectName("sectionTitle");
+    auto* planTitle = new QLabel("专注计划");
+    planTitle->setObjectName("sectionTitle");
+    auto* petTitle = new QLabel("桌宠陪伴");
+    petTitle->setObjectName("sectionTitle");
+    auto* growthTitle = new QLabel("成长状态");
+    growthTitle->setObjectName("sectionTitle");
+
+    auto* left = new QFrame;
+    left->setObjectName("panel");
     auto* leftLayout = new QVBoxLayout(left);
-    leftLayout->addWidget(new QLabel("Current task"));
+    leftLayout->setContentsMargins(22, 22, 22, 22);
+    leftLayout->setSpacing(14);
+    leftLayout->addWidget(title);
+    leftLayout->addWidget(subtitle);
+    leftLayout->addSpacing(8);
+    leftLayout->addWidget(taskTitle);
     leftLayout->addWidget(m_taskInput);
     leftLayout->addWidget(m_timerPanel);
-    leftLayout->addWidget(new QLabel("Focus plan"));
+    leftLayout->addWidget(planTitle);
     leftLayout->addWidget(m_planView, 1);
-    leftLayout->addWidget(m_petProfileLabel);
     leftLayout->addWidget(m_statusLabel);
 
-    auto* splitter = new QSplitter;
-    splitter->addWidget(left);
-    splitter->addWidget(m_petWidget);
-    splitter->setStretchFactor(0, 3);
-    splitter->setStretchFactor(1, 2);
+    auto* right = new QFrame;
+    right->setObjectName("sidePanel");
+    auto* rightLayout = new QVBoxLayout(right);
+    rightLayout->setContentsMargins(22, 22, 22, 22);
+    rightLayout->setSpacing(14);
+    rightLayout->addWidget(petTitle);
+    rightLayout->addWidget(m_petWidget, 1);
+    rightLayout->addWidget(growthTitle);
+    rightLayout->addWidget(m_petProfileLabel);
+    rightLayout->addStretch();
 
-    setCentralWidget(splitter);
+    auto* root = new QWidget;
+    root->setObjectName("root");
+    auto* rootLayout = new QHBoxLayout(root);
+    rootLayout->setContentsMargins(20, 20, 20, 20);
+    rootLayout->setSpacing(18);
+    rootLayout->addWidget(left, 7);
+    rootLayout->addWidget(right, 3);
+
+    setCentralWidget(root);
     updatePetProfileView();
 }
 
 void MainWindow::applyStyle() {
     qApp->setStyleSheet(
-        "QMainWindow, QWidget { background: #f7f8f3; color: #25302a; font-size: 14px; }"
-        "QLineEdit, QTextEdit, QSpinBox, QTableWidget { background: #ffffff; border: 1px solid #cfd8cc; border-radius: 6px; padding: 8px; }"
-        "QPushButton { background: #335c4b; color: white; border: 0; border-radius: 6px; padding: 8px 12px; }"
+        "QMainWindow, #root { background: #eef3ea; color: #25302a; font-size: 14px; }"
+        "#panel, #sidePanel { background: #fbfcf7; border: 1px solid #d8e0d4; border-radius: 10px; }"
+        "#sidePanel { background: #f7faf4; }"
+        "#appTitle { font-size: 34px; font-weight: 800; color: #1f3d31; }"
+        "#appSubtitle { color: #667565; font-size: 14px; }"
+        "#sectionTitle { color: #345347; font-weight: 700; font-size: 15px; padding-top: 4px; }"
+        "QLineEdit, QTextEdit, QSpinBox, QTableWidget { background: #ffffff; border: 1px solid #cfd8cc; border-radius: 8px; padding: 9px; selection-background-color: #b8d8c8; }"
+        "QLineEdit:focus, QTextEdit:focus, QSpinBox:focus { border: 1px solid #4f8068; }"
+        "QPushButton { background: #335c4b; color: white; border: 0; border-radius: 8px; padding: 9px 13px; font-weight: 600; }"
         "QPushButton:disabled { background: #aeb8ad; }"
         "QPushButton:hover { background: #274739; }"
+        "QPushButton:pressed { background: #1f362c; }"
         "#timeLabel { font-size: 54px; font-weight: 700; color: #20352b; }"
-        "#metricLabel, #petProfileLabel, #dailyReportLabel { background: #ffffff; border: 1px solid #d6ddd3; border-radius: 8px; padding: 10px; font-size: 14px; }");
+        "#metricLabel, #petProfileLabel, #dailyReportLabel { background: #ffffff; border: 1px solid #d6ddd3; border-radius: 8px; padding: 12px; font-size: 14px; }"
+        "QSplitter::handle { background: transparent; }");
 }
 
 void MainWindow::requestPlan() {
     const QString input = m_taskInput->text().trimmed();
     if (input.isEmpty()) {
-        QMessageBox::information(this, "Task required", "Please enter what you want to focus on.");
+        QMessageBox::information(this, "需要任务", "请先输入本轮要专注完成的任务。");
         return;
     }
     m_sessionManager.requestPlan(input, m_timerPanel->minutes());
@@ -154,12 +209,12 @@ void MainWindow::requestPlan() {
 void MainWindow::startSession() {
     const QString input = m_taskInput->text().trimmed();
     if (input.isEmpty()) {
-        QMessageBox::information(this, "Task required", "Please enter what you want to focus on.");
+        QMessageBox::information(this, "需要任务", "请先输入本轮要专注完成的任务。");
         return;
     }
     if (m_currentTask.originalInput != input) {
         m_sessionManager.requestPlan(input, m_timerPanel->minutes());
-        m_statusLabel->setText("Planning first. Start again after the plan appears.");
+        m_statusLabel->setText("正在先生成计划。计划出现后请再次点击开始。");
         return;
     }
     m_sessionManager.startSession(m_currentTask);
@@ -168,11 +223,11 @@ void MainWindow::startSession() {
 void MainWindow::cancelSessionWithConfirm() {
     const QMessageBox::StandardButton result = QMessageBox::question(
         this,
-        "Stop round",
-        "Stop the current timer? This round will not be saved as completed.");
+        "结束本轮",
+        "确定要结束当前计时吗？这轮不会保存为完成记录。");
     if (result == QMessageBox::Yes) {
         m_sessionManager.cancelSession();
-        m_statusLabel->setText("Current timer stopped.");
+        m_statusLabel->setText("当前计时已结束。");
     }
 }
 
@@ -222,7 +277,7 @@ void MainWindow::showSettings() {
     m_focusMonitor.setBlacklist(m_blacklist);
     m_focusMonitor.setWhitelist(m_whitelist);
 
-    m_statusLabel->setText(saved ? "Settings saved and applied." : "Settings applied, but saving config files failed.");
+    m_statusLabel->setText(saved ? "设置已保存并应用。" : "设置已应用，但写入配置文件失败。");
 }
 
 void MainWindow::showReview(const FocusSession& session) {
@@ -236,24 +291,24 @@ void MainWindow::showReview(const FocusSession& session) {
 void MainWindow::updatePlanView(const FocusTask& task) {
     m_currentTask = task;
     QString text;
-    text += QString("Task: %1\n").arg(task.originalInput);
-    text += QString("Estimate: %1 minutes\n").arg(task.estimatedMinutes);
-    text += QString("Difficulty: %1\n\n").arg(task.difficulty);
-    text += "Goals:\n";
+    text += QString("任务：%1\n").arg(task.originalInput);
+    text += QString("预计：%1 分钟\n").arg(task.estimatedMinutes);
+    text += QString("难度：%1\n\n").arg(task.difficulty);
+    text += "本轮目标：\n";
     for (const QString& goal : task.goals) {
         text += QString("- %1\n").arg(goal);
     }
-    text += "\nAvoid:\n";
+    text += "\n本轮避免：\n";
     for (const QString& item : task.avoidList) {
         text += QString("- %1\n").arg(item);
     }
     m_planView->setPlainText(text);
-    m_statusLabel->setText("Plan generated. You can start focusing.");
+    m_statusLabel->setText("计划已生成，可以开始专注。");
 }
 
 void MainWindow::updatePetProfileView() {
     const PetProfile profile = m_sessionManager.petProfile();
-    m_petProfileLabel->setText(QString("Pet Lv.%1  EXP %2/100  Intimacy %3  Focus %4 min  Rounds %5")
+    m_petProfileLabel->setText(QString("桌宠 Lv.%1  EXP %2/100  亲密度 %3  累计专注 %4 分钟  番茄轮数 %5")
         .arg(profile.level)
         .arg(profile.exp % 100)
         .arg(profile.intimacy)

@@ -45,6 +45,6 @@ private:
     EventBus& m_eventBus;
     PetMood m_mood = PetMood::Idle;
     FocusState m_focusState = FocusState::NotStarted;
-    QString m_speech = "Ready for a focus round?";
+    QString m_speech = "准备好开始一轮专注了吗？";
     int m_distractionCount = 0;
 };

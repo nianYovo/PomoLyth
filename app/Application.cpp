@@ -30,6 +30,7 @@ bool Application::initialize() {
     m_focusMonitor->setIntervalSeconds(m_config.focusMonitorIntervalSeconds);
     m_focusMonitor->setBlacklist(m_jsonStorage.loadBlacklist());
     m_focusMonitor->setWhitelist(m_jsonStorage.loadWhitelist());
+    m_inputActivityMonitor = std::make_unique<InputActivityMonitor>(m_eventBus);
 
     m_sessionManager = std::make_unique<FocusSessionManager>(
         m_eventBus,
@@ -37,6 +38,7 @@ bool Application::initialize() {
         *m_taskPlanner,
         *m_reviewGenerator,
         *m_focusMonitor,
+        *m_inputActivityMonitor,
         m_storage,
         m_achievementSystem);
     m_sessionManager->setBreakMinutes(m_config.defaultBreakMinutes);
@@ -50,6 +52,7 @@ bool Application::initialize() {
         m_storage,
         m_jsonStorage,
         *m_focusMonitor,
+        *m_inputActivityMonitor,
         *m_reviewGenerator,
         m_config);
 
@@ -85,10 +88,10 @@ void Application::setupTray() {
     m_trayIcon->setToolTip("PomoLyth");
 
     auto* menu = new QMenu;
-    auto* showAction = menu->addAction("Show main window");
-    auto* hideAction = menu->addAction("Hide main window");
+    auto* showAction = menu->addAction("显示主窗口");
+    auto* hideAction = menu->addAction("隐藏主窗口");
     menu->addSeparator();
-    auto* quitAction = menu->addAction("Quit");
+    auto* quitAction = menu->addAction("退出");
 
     connect(showAction, &QAction::triggered, this, [this]() {
         if (m_mainWindow) {
@@ -125,25 +128,28 @@ void Application::setupNotifications() {
 
         switch (event.type) {
         case AppEventType::TimerStarted:
-            m_trayIcon->showMessage("PomoLyth", "Focus session started.", QSystemTrayIcon::Information, 2500);
+            m_trayIcon->showMessage("PomoLyth", "专注开始，桌宠会陪你守住这一轮。", QSystemTrayIcon::Information, 2500);
             break;
         case AppEventType::DistractionDetected:
-            m_trayIcon->showMessage("PomoLyth", QString("Possible distraction: %1").arg(event.payload), QSystemTrayIcon::Warning, 3000);
+            m_trayIcon->showMessage("PomoLyth", QString("检测到可能分心：%1").arg(event.payload), QSystemTrayIcon::Warning, 3000);
+            break;
+        case AppEventType::InputIdleDetected:
+            m_trayIcon->showMessage("PomoLyth", QString("已经 %1 秒没有键盘或鼠标输入。").arg(event.payload), QSystemTrayIcon::Warning, 3000);
             break;
         case AppEventType::TimerCompleted:
-            m_trayIcon->showMessage("PomoLyth", "Timer completed. Please add a short review.", QSystemTrayIcon::Information, 3000);
+            m_trayIcon->showMessage("PomoLyth", "计时结束，记得做一次简短复盘。", QSystemTrayIcon::Information, 3000);
             break;
         case AppEventType::BreakStarted:
-            m_trayIcon->showMessage("PomoLyth", QString("Break started: %1 minutes.").arg(event.payload), QSystemTrayIcon::Information, 2500);
+            m_trayIcon->showMessage("PomoLyth", QString("进入 %1 分钟短休息。").arg(event.payload), QSystemTrayIcon::Information, 2500);
             break;
         case AppEventType::BreakFinished:
-            m_trayIcon->showMessage("PomoLyth", "Break finished. Ready for the next round.", QSystemTrayIcon::Information, 2500);
+            m_trayIcon->showMessage("PomoLyth", "短休息结束，可以准备下一轮。", QSystemTrayIcon::Information, 2500);
             break;
         case AppEventType::SessionSaved:
-            m_trayIcon->showMessage("PomoLyth", "Session saved.", QSystemTrayIcon::Information, 2500);
+            m_trayIcon->showMessage("PomoLyth", "本轮记录已保存。", QSystemTrayIcon::Information, 2500);
             break;
         case AppEventType::AchievementUnlocked:
-            m_trayIcon->showMessage("PomoLyth", QString("Achievement unlocked: %1").arg(event.payload), QSystemTrayIcon::Information, 3000);
+            m_trayIcon->showMessage("PomoLyth", QString("解锁成就：%1").arg(event.payload), QSystemTrayIcon::Information, 3000);
             break;
         default:
             break;

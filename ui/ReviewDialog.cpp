@@ -18,21 +18,21 @@ static QStringList linesFromText(const QString& text) {
 }
 
 ReviewDialog::ReviewDialog(QWidget* parent) : QDialog(parent) {
-    setWindowTitle("Session Review");
+    setWindowTitle("本轮复盘");
     resize(460, 360);
 
     m_completedEdit = new QTextEdit;
-    m_completedEdit->setPlaceholderText("What did you complete? One item per line is fine.");
+    m_completedEdit->setPlaceholderText("这一轮完成了什么？可以一行一个。");
     m_problemsEdit = new QTextEdit;
-    m_problemsEdit->setPlaceholderText("What got stuck? What should the next round watch for?");
+    m_problemsEdit->setPlaceholderText("哪里卡住了？下一轮需要注意什么？");
     m_ratingSpin = new QSpinBox;
     m_ratingSpin->setRange(1, 5);
     m_ratingSpin->setValue(4);
 
     auto* form = new QFormLayout;
-    form->addRow("Completed", m_completedEdit);
-    form->addRow("Problems", m_problemsEdit);
-    form->addRow("Rating", m_ratingSpin);
+    form->addRow("完成内容", m_completedEdit);
+    form->addRow("问题记录", m_problemsEdit);
+    form->addRow("自评分", m_ratingSpin);
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);

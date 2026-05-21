@@ -15,7 +15,7 @@ SettingsDialog::SettingsDialog(
     const QStringList& whitelist,
     QWidget* parent)
     : QDialog(parent) {
-    setWindowTitle("PomoLyth Settings");
+    setWindowTitle("PomoLyth 设置");
     resize(520, 520);
 
     m_focusMinutes = new QSpinBox;
@@ -47,24 +47,24 @@ SettingsDialog::SettingsDialog(
 
     m_blacklistEdit = new QTextEdit;
     m_blacklistEdit->setPlainText(blacklist.join('\n'));
-    m_blacklistEdit->setPlaceholderText("One keyword per line, e.g. steam or bilibili.");
+    m_blacklistEdit->setPlaceholderText("一行一个关键词，例如 steam 或 bilibili。");
 
     m_whitelistEdit = new QTextEdit;
     m_whitelistEdit->setPlainText(whitelist.join('\n'));
-    m_whitelistEdit->setPlaceholderText("One keyword per line. Matching windows are ignored.");
+    m_whitelistEdit->setPlaceholderText("一行一个关键词。命中的窗口不会被判定为分心。");
 
     auto* form = new QFormLayout;
-    form->addRow("Focus minutes", m_focusMinutes);
-    form->addRow("Break minutes", m_breakMinutes);
-    form->addRow("Monitor interval", m_monitorInterval);
-    form->addRow("AI provider", m_aiProviderBox);
-    form->addRow("OpenAI base URL", m_openAiBaseUrl);
-    form->addRow("OpenAI model", m_openAiModel);
-    form->addRow("API key env var", m_openAiApiKeyEnv);
-    form->addRow("Distraction blacklist", m_blacklistEdit);
-    form->addRow("Learning whitelist", m_whitelistEdit);
+    form->addRow("专注时长", m_focusMinutes);
+    form->addRow("休息时长", m_breakMinutes);
+    form->addRow("检测间隔", m_monitorInterval);
+    form->addRow("AI Provider", m_aiProviderBox);
+    form->addRow("OpenAI 地址", m_openAiBaseUrl);
+    form->addRow("OpenAI 模型", m_openAiModel);
+    form->addRow("API Key 环境变量", m_openAiApiKeyEnv);
+    form->addRow("分心黑名单", m_blacklistEdit);
+    form->addRow("学习白名单", m_whitelistEdit);
 
-    auto* note = new QLabel("Timer and monitor settings apply immediately. AI provider changes are used after restarting the app.");
+    auto* note = new QLabel("计时器和监控设置会立即生效。AI Provider 修改后需要重启应用。");
     note->setWordWrap(true);
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);

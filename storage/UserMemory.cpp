@@ -58,11 +58,11 @@ UserMemorySnapshot UserMemory::buildSnapshot() const {
         ? QString("%1:00-%2:00")
               .arg(snapshot.bestFocusHour, 2, 10, QLatin1Char('0'))
               .arg((snapshot.bestFocusHour + 1) % 24, 2, 10, QLatin1Char('0'))
-        : "None";
-    const QString sourceText = snapshot.commonDistractionSource.isEmpty() ? "None" : snapshot.commonDistractionSource;
-    const QString tasksText = snapshot.frequentTasks.isEmpty() ? "None" : snapshot.frequentTasks.join(" / ");
+        : "暂无";
+    const QString sourceText = snapshot.commonDistractionSource.isEmpty() ? "暂无" : snapshot.commonDistractionSource;
+    const QString tasksText = snapshot.frequentTasks.isEmpty() ? "暂无" : snapshot.frequentTasks.join(" / ");
 
-    snapshot.summary = QString("Long-term memory: %1 focused minutes across %2 days. Best hour: %3. Common tasks: %4. Common distraction: %5.")
+    snapshot.summary = QString("长期记忆：累计专注 %1 分钟，覆盖 %2 天。高效时段倾向于 %3。常见任务：%4。常见分心源：%5。")
         .arg(snapshot.totalFocusMinutes)
         .arg(snapshot.totalFocusDays)
         .arg(bestHourText, tasksText, sourceText);

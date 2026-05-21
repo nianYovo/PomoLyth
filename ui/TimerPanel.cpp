@@ -12,7 +12,7 @@ TimerPanel::TimerPanel(QWidget* parent) : QWidget(parent) {
     m_timeLabel->setAlignment(Qt::AlignCenter);
     m_timeLabel->setObjectName("timeLabel");
 
-    m_stateLabel = new QLabel("Ready");
+    m_stateLabel = new QLabel("准备就绪");
     m_stateLabel->setAlignment(Qt::AlignCenter);
 
     m_minutesSpin = new QSpinBox;
@@ -20,17 +20,17 @@ TimerPanel::TimerPanel(QWidget* parent) : QWidget(parent) {
     m_minutesSpin->setValue(25);
     m_minutesSpin->setSuffix(" min");
 
-    m_planButton = new QPushButton("Plan");
-    m_startButton = new QPushButton("Start");
-    m_pauseButton = new QPushButton("Pause");
-    m_resumeButton = new QPushButton("Resume");
-    m_stopButton = new QPushButton("Stop");
-    m_dashboardButton = new QPushButton("Dashboard");
-    m_petWindowButton = new QPushButton("Floating Pet");
-    m_settingsButton = new QPushButton("Settings");
+    m_planButton = new QPushButton("生成计划");
+    m_startButton = new QPushButton("开始");
+    m_pauseButton = new QPushButton("暂停");
+    m_resumeButton = new QPushButton("继续");
+    m_stopButton = new QPushButton("结束");
+    m_dashboardButton = new QPushButton("数据面板");
+    m_petWindowButton = new QPushButton("悬浮桌宠");
+    m_settingsButton = new QPushButton("设置");
 
     auto* durationLayout = new QHBoxLayout;
-    durationLayout->addWidget(new QLabel("Duration"));
+    durationLayout->addWidget(new QLabel("时长"));
     durationLayout->addWidget(m_minutesSpin);
     durationLayout->addStretch();
     durationLayout->addWidget(m_petWindowButton);
@@ -80,7 +80,7 @@ void TimerPanel::setTime(int remainingSeconds, int totalSeconds) {
 }
 
 void TimerPanel::setRunning(bool running) {
-    m_stateLabel->setText(running ? "Focusing" : "Ready");
+    m_stateLabel->setText(running ? "专注中" : "准备就绪");
     m_startButton->setEnabled(!running);
     m_pauseButton->setEnabled(running);
     m_stopButton->setEnabled(running);
@@ -88,7 +88,7 @@ void TimerPanel::setRunning(bool running) {
 }
 
 void TimerPanel::setPaused(bool paused) {
-    m_stateLabel->setText(paused ? "Paused" : m_stateLabel->text());
+    m_stateLabel->setText(paused ? "已暂停" : m_stateLabel->text());
     m_pauseButton->setEnabled(!paused);
     m_resumeButton->setEnabled(paused);
 }

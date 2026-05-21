@@ -35,36 +35,39 @@ void PetStateMachine::handleEvent(const AppEvent& event) {
     switch (event.type) {
     case AppEventType::TimerStarted:
         m_distractionCount = 0;
-        setMood(PetMood::Focused, FocusState::Focusing, "I am here. Keep this step small and steady.");
+        setMood(PetMood::Focused, FocusState::Focusing, "我在旁边陪你，先把这一小步做好。");
         break;
     case AppEventType::TimerPaused:
-        setMood(PetMood::Worried, FocusState::Distracted, "A pause is fine. Keep the task from scattering.");
+        setMood(PetMood::Worried, FocusState::Distracted, "暂停一下没关系，别让任务散掉。");
         break;
     case AppEventType::TimerResumed:
-        setMood(PetMood::Focused, FocusState::Focusing, "Nice return. Continue.");
+        setMood(PetMood::Focused, FocusState::Focusing, "回来得很快，继续。");
         break;
     case AppEventType::TimerCompleted:
-        setMood(PetMood::Celebrating, FocusState::Completed, "Round complete. Solid work.");
+        setMood(PetMood::Celebrating, FocusState::Completed, "完成一轮！这一下很扎实。");
         break;
     case AppEventType::TimerCancelled:
-        setMood(PetMood::Idle, FocusState::NotStarted, "Round cancelled. Start fresh next time.");
+        setMood(PetMood::Idle, FocusState::NotStarted, "这轮先收起，下一轮重新来。");
         break;
     case AppEventType::BreakStarted:
-        setMood(PetMood::Sleepy, FocusState::BreakTime, "Take a short break and drink some water.");
+        setMood(PetMood::Sleepy, FocusState::BreakTime, "休息一下，喝口水。");
         break;
     case AppEventType::BreakFinished:
-        setMood(PetMood::Encouraging, FocusState::NotStarted, "Break finished. Ease into the next round.");
+        setMood(PetMood::Encouraging, FocusState::NotStarted, "休息结束，下一轮可以慢慢启动。");
         break;
     case AppEventType::DistractionDetected:
         ++m_distractionCount;
         if (m_distractionCount >= 3) {
-            setMood(PetMood::Angry, FocusState::Distracted, "Third drift detected. Return to the task window.");
+            setMood(PetMood::Angry, FocusState::Distracted, "这已经是第三次偏航了，先回到任务窗口。");
         } else {
-            setMood(PetMood::Worried, FocusState::Distracted, "Possible drift. Finish this small stretch first.");
+            setMood(PetMood::Worried, FocusState::Distracted, "你是不是跑偏啦？先撑完这一小段。");
         }
         break;
+    case AppEventType::InputIdleDetected:
+        setMood(PetMood::Worried, FocusState::Distracted, "你已经安静一会儿了，还在专注吗？");
+        break;
     case AppEventType::PetLevelUp:
-        setMood(PetMood::Proud, m_focusState, "Level up. Consistency leaves a mark.");
+        setMood(PetMood::Proud, m_focusState, "升级了！长期坚持真的会留下痕迹。");
         break;
     default:
         break;

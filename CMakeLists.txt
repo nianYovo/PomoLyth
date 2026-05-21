@@ -47,6 +47,8 @@ qt_add_executable(PomoLyth
     monitor/WindowsWindowMonitor.cpp
     monitor/FocusMonitor.h
     monitor/FocusMonitor.cpp
+    monitor/InputActivityMonitor.h
+    monitor/InputActivityMonitor.cpp
     storage/SQLiteStorage.h
     storage/SQLiteStorage.cpp
     storage/JsonStorage.h

@@ -10,18 +10,18 @@ FocusTask TaskPlanner::generatePlan(const QString& userInput, int minutes) {
     task.estimatedMinutes = minutes;
     task.difficulty = "normal";
     task.goals = {
-        "Define the smallest useful goal",
-        "Finish the core step first",
-        "Record one blocker for review"
+        "明确本轮最小可完成目标",
+        "先完成最核心的一步",
+        "记录一个需要复盘的卡点"
     };
     task.avoidList = {
-        "Avoid frequent context switching",
-        "Avoid scope creep",
-        "Avoid entertainment apps"
+        "不要频繁切换资料",
+        "不要临时扩展任务范围",
+        "不要打开娱乐软件"
     };
 
     if (!response.trimmed().isEmpty()) {
-        task.goals[0] = response.section("Avoid", 0, 0).trimmed().left(80);
+        task.goals[0] = response.section("避免事项", 0, 0).trimmed().left(80);
     }
 
     return task;
