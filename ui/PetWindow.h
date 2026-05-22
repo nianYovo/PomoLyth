@@ -15,6 +15,13 @@ public:
 public slots:
     void setMood(PetMood mood, const QString& speech);
 
+signals:
+    void startRequested();
+    void pauseRequested();
+    void resumeRequested();
+    void stopRequested();
+    void calendarRequested();
+
 protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
@@ -25,4 +32,5 @@ protected:
 private:
     PetWidget* m_petWidget = nullptr;
     QPoint m_dragOffset;
+    bool m_dragging = false;
 };

@@ -26,6 +26,7 @@ signals:
     void stopRequested();
     void dashboardRequested();
     void petWindowRequested();
+    void calendarRequested();
     void settingsRequested();
 
 private:
@@ -39,5 +40,6 @@ private:
     QPushButton* m_stopButton = nullptr;
     QPushButton* m_dashboardButton = nullptr;
     QPushButton* m_petWindowButton = nullptr;
+    QPushButton* m_calendarButton = nullptr;
     QPushButton* m_settingsButton = nullptr;
 };

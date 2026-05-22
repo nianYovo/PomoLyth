@@ -59,6 +59,8 @@ qt_add_executable(PomoLyth
     ui/PetWidget.cpp
     ui/PetWindow.h
     ui/PetWindow.cpp
+    ui/DesktopCalendarWindow.h
+    ui/DesktopCalendarWindow.cpp
     ui/SettingsDialog.h
     ui/SettingsDialog.cpp
     ui/ReviewDialog.h

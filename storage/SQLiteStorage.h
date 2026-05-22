@@ -1,6 +1,8 @@
 #pragma once
 
+#include <QDate>
 #include <QObject>
+#include <QMap>
 #include <QSqlDatabase>
 #include <QVector>
 #include "models/DistractionEvent.h"
@@ -38,6 +40,9 @@ public:
     DashboardStats dashboardStats() const;
     bool saveDailyReport(const QString& content);
     QVector<DailyReport> recentDailyReports(int limit = 7) const;
+    bool saveDayPlan(const QDate& date, const QString& content);
+    QString dayPlan(const QDate& date) const;
+    QMap<QDate, QString> monthPlans(int year, int month) const;
 
     PetProfile loadPetProfile() const;
     bool savePetProfile(const PetProfile& profile);

@@ -17,7 +17,7 @@ TimerPanel::TimerPanel(QWidget* parent) : QWidget(parent) {
     m_timeLabel->setAlignment(Qt::AlignCenter);
     m_timeLabel->setObjectName("timeLabel");
 
-    m_stateLabel = new QLabel("准备就绪");
+    m_stateLabel = new QLabel(QString::fromUtf8("准备就绪"));
     m_stateLabel->setAlignment(Qt::AlignCenter);
     m_stateLabel->setObjectName("statePill");
 
@@ -30,16 +30,17 @@ TimerPanel::TimerPanel(QWidget* parent) : QWidget(parent) {
     m_minutesSpin->setFixedWidth(128);
     m_minutesSpin->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
-    m_planButton = new QPushButton("生成计划");
+    m_planButton = new QPushButton(QString::fromUtf8("生成计划"));
     m_planButton->setParent(this);
     m_planButton->hide();
-    m_startButton = new QPushButton("开始");
-    m_pauseButton = new QPushButton("暂停");
-    m_resumeButton = new QPushButton("继续");
-    m_stopButton = new QPushButton("结束");
-    m_dashboardButton = new QPushButton("数据面板");
-    m_petWindowButton = new QPushButton("悬浮桌宠");
-    m_settingsButton = new QPushButton("设置");
+    m_startButton = new QPushButton(QString::fromUtf8("开始"));
+    m_pauseButton = new QPushButton(QString::fromUtf8("暂停"));
+    m_resumeButton = new QPushButton(QString::fromUtf8("继续"));
+    m_stopButton = new QPushButton(QString::fromUtf8("结束"));
+    m_dashboardButton = new QPushButton(QString::fromUtf8("数据面板"));
+    m_petWindowButton = new QPushButton(QString::fromUtf8("悬浮桌宠"));
+    m_calendarButton = new QPushButton(QString::fromUtf8("月历"));
+    m_settingsButton = new QPushButton(QString::fromUtf8("设置"));
 
     m_planButton->setProperty("buttonRole", "mint");
     m_startButton->setProperty("buttonRole", "primary");
@@ -47,6 +48,7 @@ TimerPanel::TimerPanel(QWidget* parent) : QWidget(parent) {
     m_resumeButton->setProperty("buttonRole", "outline");
     m_stopButton->setProperty("buttonRole", "outline");
     m_petWindowButton->setProperty("buttonRole", "outline");
+    m_calendarButton->setProperty("buttonRole", "outline");
     m_dashboardButton->setProperty("buttonRole", "outline");
     m_settingsButton->setProperty("buttonRole", "outline");
 
@@ -57,6 +59,7 @@ TimerPanel::TimerPanel(QWidget* parent) : QWidget(parent) {
         m_resumeButton,
         m_stopButton,
         m_petWindowButton,
+        m_calendarButton,
         m_dashboardButton,
         m_settingsButton,
     };
@@ -69,10 +72,11 @@ TimerPanel::TimerPanel(QWidget* parent) : QWidget(parent) {
     m_resumeButton->setMinimumWidth(138);
     m_stopButton->setMinimumWidth(138);
     m_petWindowButton->setMinimumWidth(98);
+    m_calendarButton->setMinimumWidth(74);
     m_dashboardButton->setMinimumWidth(98);
     m_settingsButton->setMinimumWidth(88);
 
-    auto* durationLabel = new QLabel("专注时长");
+    auto* durationLabel = new QLabel(QString::fromUtf8("专注时长"));
     durationLabel->setObjectName("controlLabel");
 
     auto* durationLayout = new QHBoxLayout;
@@ -99,6 +103,7 @@ TimerPanel::TimerPanel(QWidget* parent) : QWidget(parent) {
     toolsLayout->setSpacing(10);
     toolsLayout->addStretch();
     toolsLayout->addWidget(m_petWindowButton);
+    toolsLayout->addWidget(m_calendarButton);
     toolsLayout->addWidget(m_dashboardButton);
     toolsLayout->addWidget(m_settingsButton);
     toolsLayout->addStretch();
@@ -119,6 +124,7 @@ TimerPanel::TimerPanel(QWidget* parent) : QWidget(parent) {
     connect(m_stopButton, &QPushButton::clicked, this, &TimerPanel::stopRequested);
     connect(m_dashboardButton, &QPushButton::clicked, this, &TimerPanel::dashboardRequested);
     connect(m_petWindowButton, &QPushButton::clicked, this, &TimerPanel::petWindowRequested);
+    connect(m_calendarButton, &QPushButton::clicked, this, &TimerPanel::calendarRequested);
     connect(m_settingsButton, &QPushButton::clicked, this, &TimerPanel::settingsRequested);
 
     setRunning(false);
@@ -142,7 +148,7 @@ void TimerPanel::setTime(int remainingSeconds, int totalSeconds) {
 }
 
 void TimerPanel::setRunning(bool running) {
-    m_stateLabel->setText(running ? "专注中" : "准备就绪");
+    m_stateLabel->setText(running ? QString::fromUtf8("专注中") : QString::fromUtf8("准备就绪"));
     m_startButton->setEnabled(!running);
     m_pauseButton->setEnabled(running);
     m_stopButton->setEnabled(running);
@@ -150,7 +156,7 @@ void TimerPanel::setRunning(bool running) {
 }
 
 void TimerPanel::setPaused(bool paused) {
-    m_stateLabel->setText(paused ? "已暂停" : m_stateLabel->text());
+    m_stateLabel->setText(paused ? QString::fromUtf8("已暂停") : m_stateLabel->text());
     m_pauseButton->setEnabled(!paused);
     m_resumeButton->setEnabled(paused);
 }

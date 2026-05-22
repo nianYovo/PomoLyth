@@ -9,6 +9,7 @@
 #include "storage/JsonStorage.h"
 
 class DashboardWindow;
+class DesktopCalendarWindow;
 class QCloseEvent;
 class QLabel;
 class PetWidget;
@@ -45,6 +46,8 @@ private:
     void showDashboard();
     void togglePetWindow();
     void showSettings();
+    void showDesktopCalendar();
+    void openPlannerFromPet();
     void showReview(const FocusSession& session);
     void updatePlanView(const FocusTask& task);
     void updatePetProfileView();
@@ -69,5 +72,6 @@ private:
     TimerPanel* m_timerPanel = nullptr;
     PetWidget* m_petWidget = nullptr;
     PetWindow* m_petWindow = nullptr;
+    DesktopCalendarWindow* m_desktopCalendar = nullptr;
     DashboardWindow* m_dashboard = nullptr;
 };

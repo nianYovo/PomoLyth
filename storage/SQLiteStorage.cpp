@@ -225,6 +225,58 @@ QVector<DailyReport> SQLiteStorage::recentDailyReports(int limit) const {
     return reports;
 }
 
+bool SQLiteStorage::saveDayPlan(const QDate& date, const QString& content) {
+    QSqlQuery query(m_db);
+    if (content.trimmed().isEmpty()) {
+        query.prepare("DELETE FROM day_plans WHERE plan_date = ?");
+        query.addBindValue(date.toString(Qt::ISODate));
+        return query.exec();
+    }
+
+    query.prepare(
+        "INSERT INTO day_plans (plan_date, content, updated_at) VALUES (?, ?, ?) "
+        "ON CONFLICT(plan_date) DO UPDATE SET "
+        "content = excluded.content, updated_at = excluded.updated_at");
+    query.addBindValue(date.toString(Qt::ISODate));
+    query.addBindValue(content);
+    query.addBindValue(QDateTime::currentDateTime().toString(Qt::ISODate));
+    return query.exec();
+}
+
+QString SQLiteStorage::dayPlan(const QDate& date) const {
+    QSqlQuery query(m_db);
+    query.prepare("SELECT content FROM day_plans WHERE plan_date = ?");
+    query.addBindValue(date.toString(Qt::ISODate));
+    if (query.exec() && query.next()) {
+        return query.value(0).toString();
+    }
+    return {};
+}
+
+QMap<QDate, QString> SQLiteStorage::monthPlans(int year, int month) const {
+    QMap<QDate, QString> plans;
+    const QDate first(year, month, 1);
+    const QDate last = first.addMonths(1).addDays(-1);
+
+    QSqlQuery query(m_db);
+    query.prepare(
+        "SELECT plan_date, content FROM day_plans "
+        "WHERE plan_date >= ? AND plan_date <= ? ORDER BY plan_date ASC");
+    query.addBindValue(first.toString(Qt::ISODate));
+    query.addBindValue(last.toString(Qt::ISODate));
+    if (!query.exec()) {
+        return plans;
+    }
+
+    while (query.next()) {
+        const QDate date = QDate::fromString(query.value(0).toString(), Qt::ISODate);
+        if (date.isValid()) {
+            plans.insert(date, query.value(1).toString());
+        }
+    }
+    return plans;
+}
+
 PetProfile SQLiteStorage::loadPetProfile() const {
     PetProfile profile;
     QSqlQuery query(m_db);
@@ -339,7 +391,13 @@ bool SQLiteStorage::ensureSchema() {
         "content TEXT NOT NULL,"
         "created_at TEXT NOT NULL)");
 
-    return sessionsOk && petOk && distractionsOk && achievementsOk && reportsOk;
+    const bool plansOk = query.exec(
+        "CREATE TABLE IF NOT EXISTS day_plans ("
+        "plan_date TEXT PRIMARY KEY,"
+        "content TEXT NOT NULL,"
+        "updated_at TEXT NOT NULL)");
+
+    return sessionsOk && petOk && distractionsOk && achievementsOk && reportsOk && plansOk;
 }
 
 QString SQLiteStorage::databasePath() const {

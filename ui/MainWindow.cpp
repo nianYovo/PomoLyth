@@ -17,6 +17,7 @@
 #include <QTimer>
 #include <QVBoxLayout>
 #include "ui/DashboardWindow.h"
+#include "ui/DesktopCalendarWindow.h"
 #include "ui/PetWidget.h"
 #include "ui/PetWindow.h"
 #include "ui/ReviewDialog.h"
@@ -63,6 +64,7 @@ MainWindow::MainWindow(
     connect(m_timerPanel, &TimerPanel::stopRequested, this, &MainWindow::cancelSessionWithConfirm);
     connect(m_timerPanel, &TimerPanel::dashboardRequested, this, &MainWindow::showDashboard);
     connect(m_timerPanel, &TimerPanel::petWindowRequested, this, &MainWindow::togglePetWindow);
+    connect(m_timerPanel, &TimerPanel::calendarRequested, this, &MainWindow::showDesktopCalendar);
     connect(m_timerPanel, &TimerPanel::settingsRequested, this, &MainWindow::showSettings);
 
     connect(&m_timer, &PomodoroTimer::ticked, m_timerPanel, &TimerPanel::setTime);
@@ -108,6 +110,7 @@ MainWindow::MainWindow(
     QTimer::singleShot(300, this, [this]() {
         m_statusLabel->setText(m_statusLabel->text() + " 点击“悬浮桌宠”可显示透明桌面宠物。");
     });
+    QTimer::singleShot(500, this, &MainWindow::showDesktopCalendar);
 }
 
 void MainWindow::buildUi() {
@@ -144,7 +147,7 @@ void MainWindow::buildUi() {
     m_expProgress->setTextVisible(false);
 
     m_timerPanel = new TimerPanel;
-    m_timerPanel->setFixedSize(380, 350);
+    m_timerPanel->setFixedSize(440, 350);
     m_timerPanel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_petWidget = new PetWidget;
     m_petWidget->setMaximumWidth(270);
@@ -284,6 +287,11 @@ void MainWindow::togglePetWindow() {
         m_petWindow = new PetWindow;
         m_petWindow->setMood(m_petStateMachine.mood(), m_petStateMachine.speechText());
         connect(&m_petStateMachine, &PetStateMachine::moodChanged, m_petWindow, &PetWindow::setMood);
+        connect(m_petWindow, &PetWindow::startRequested, this, &MainWindow::openPlannerFromPet);
+        connect(m_petWindow, &PetWindow::pauseRequested, &m_sessionManager, &FocusSessionManager::pauseSession);
+        connect(m_petWindow, &PetWindow::resumeRequested, &m_sessionManager, &FocusSessionManager::resumeSession);
+        connect(m_petWindow, &PetWindow::stopRequested, this, &MainWindow::cancelSessionWithConfirm);
+        connect(m_petWindow, &PetWindow::calendarRequested, this, &MainWindow::showDesktopCalendar);
     }
 
     if (m_petWindow->isVisible()) {
@@ -292,6 +300,21 @@ void MainWindow::togglePetWindow() {
         m_petWindow->show();
         m_petWindow->raise();
     }
+}
+
+void MainWindow::showDesktopCalendar() {
+    if (!m_desktopCalendar) {
+        m_desktopCalendar = new DesktopCalendarWindow(m_storage);
+    }
+    m_desktopCalendar->show();
+}
+
+void MainWindow::openPlannerFromPet() {
+    show();
+    raise();
+    activateWindow();
+    m_taskInput->setFocus();
+    m_statusLabel->setText(QString::fromUtf8("先写下这一轮计划，再点击开始。"));
 }
 
 void MainWindow::showSettings() {
