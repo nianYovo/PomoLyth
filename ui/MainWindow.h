@@ -6,7 +6,6 @@
 #include "core/PetStateMachine.h"
 #include "models/FocusTask.h"
 #include "monitor/FocusMonitor.h"
-#include "monitor/InputActivityMonitor.h"
 #include "storage/JsonStorage.h"
 
 class DashboardWindow;
@@ -14,6 +13,7 @@ class QCloseEvent;
 class QLabel;
 class PetWidget;
 class PetWindow;
+class QProgressBar;
 class QTextEdit;
 class QLineEdit;
 class TimerPanel;
@@ -29,7 +29,6 @@ public:
         SQLiteStorage& storage,
         JsonStorage& jsonStorage,
         FocusMonitor& focusMonitor,
-        InputActivityMonitor& inputActivityMonitor,
         ReviewGenerator& reviewGenerator,
         const AppConfig& config,
         QWidget* parent = nullptr);
@@ -56,7 +55,6 @@ private:
     SQLiteStorage& m_storage;
     JsonStorage& m_jsonStorage;
     FocusMonitor& m_focusMonitor;
-    InputActivityMonitor& m_inputActivityMonitor;
     ReviewGenerator& m_reviewGenerator;
     AppConfig m_config;
     QStringList m_blacklist;
@@ -67,6 +65,7 @@ private:
     QTextEdit* m_planView = nullptr;
     QLabel* m_statusLabel = nullptr;
     QLabel* m_petProfileLabel = nullptr;
+    QProgressBar* m_expProgress = nullptr;
     TimerPanel* m_timerPanel = nullptr;
     PetWidget* m_petWidget = nullptr;
     PetWindow* m_petWindow = nullptr;

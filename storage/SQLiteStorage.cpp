@@ -32,14 +32,12 @@ bool SQLiteStorage::saveFocusSession(FocusSession& session) {
     QSqlQuery query(m_db);
     query.prepare(
         "INSERT INTO focus_sessions "
-        "(task, planned_minutes, actual_minutes, distraction_count, input_activity_count, max_idle_seconds, ai_summary, next_suggestion, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        "(task, planned_minutes, actual_minutes, distraction_count, ai_summary, next_suggestion, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)");
     query.addBindValue(session.task);
     query.addBindValue(session.plannedMinutes);
     query.addBindValue(session.actualMinutes);
     query.addBindValue(session.distractionCount);
-    query.addBindValue(session.keyboardMouseActivityCount);
-    query.addBindValue(session.maxIdleSeconds);
     query.addBindValue(session.aiSummary);
     query.addBindValue(session.nextSuggestion);
     query.addBindValue(session.createdAt.toString(Qt::ISODate));
@@ -79,7 +77,7 @@ QVector<FocusSession> SQLiteStorage::recentSessions(int limit) const {
     QVector<FocusSession> sessions;
     QSqlQuery query(m_db);
     query.prepare(
-        "SELECT id, task, planned_minutes, actual_minutes, distraction_count, input_activity_count, max_idle_seconds, ai_summary, next_suggestion, created_at "
+        "SELECT id, task, planned_minutes, actual_minutes, distraction_count, ai_summary, next_suggestion, created_at "
         "FROM focus_sessions ORDER BY datetime(created_at) DESC LIMIT ?");
     query.addBindValue(limit);
     if (!query.exec()) {
@@ -93,11 +91,9 @@ QVector<FocusSession> SQLiteStorage::recentSessions(int limit) const {
         session.plannedMinutes = query.value(2).toInt();
         session.actualMinutes = query.value(3).toInt();
         session.distractionCount = query.value(4).toInt();
-        session.keyboardMouseActivityCount = query.value(5).toInt();
-        session.maxIdleSeconds = query.value(6).toInt();
-        session.aiSummary = query.value(7).toString();
-        session.nextSuggestion = query.value(8).toString();
-        session.createdAt = QDateTime::fromString(query.value(9).toString(), Qt::ISODate);
+        session.aiSummary = query.value(5).toString();
+        session.nextSuggestion = query.value(6).toString();
+        session.createdAt = QDateTime::fromString(query.value(7).toString(), Qt::ISODate);
         sessions.append(session);
     }
     return sessions;
@@ -107,7 +103,7 @@ QVector<FocusSession> SQLiteStorage::allSessions() const {
     QVector<FocusSession> sessions;
     QSqlQuery query(m_db);
     query.exec(
-        "SELECT id, task, planned_minutes, actual_minutes, distraction_count, input_activity_count, max_idle_seconds, ai_summary, next_suggestion, created_at "
+        "SELECT id, task, planned_minutes, actual_minutes, distraction_count, ai_summary, next_suggestion, created_at "
         "FROM focus_sessions ORDER BY datetime(created_at) DESC");
 
     while (query.next()) {
@@ -117,11 +113,9 @@ QVector<FocusSession> SQLiteStorage::allSessions() const {
         session.plannedMinutes = query.value(2).toInt();
         session.actualMinutes = query.value(3).toInt();
         session.distractionCount = query.value(4).toInt();
-        session.keyboardMouseActivityCount = query.value(5).toInt();
-        session.maxIdleSeconds = query.value(6).toInt();
-        session.aiSummary = query.value(7).toString();
-        session.nextSuggestion = query.value(8).toString();
-        session.createdAt = QDateTime::fromString(query.value(9).toString(), Qt::ISODate);
+        session.aiSummary = query.value(5).toString();
+        session.nextSuggestion = query.value(6).toString();
+        session.createdAt = QDateTime::fromString(query.value(7).toString(), Qt::ISODate);
         sessions.append(session);
     }
     return sessions;
@@ -131,7 +125,7 @@ QVector<FocusSession> SQLiteStorage::todaySessions() const {
     QVector<FocusSession> sessions;
     QSqlQuery query(m_db);
     query.exec(
-        "SELECT id, task, planned_minutes, actual_minutes, distraction_count, input_activity_count, max_idle_seconds, ai_summary, next_suggestion, created_at "
+        "SELECT id, task, planned_minutes, actual_minutes, distraction_count, ai_summary, next_suggestion, created_at "
         "FROM focus_sessions WHERE date(created_at) = date('now', 'localtime') "
         "ORDER BY datetime(created_at) DESC");
 
@@ -142,11 +136,9 @@ QVector<FocusSession> SQLiteStorage::todaySessions() const {
         session.plannedMinutes = query.value(2).toInt();
         session.actualMinutes = query.value(3).toInt();
         session.distractionCount = query.value(4).toInt();
-        session.keyboardMouseActivityCount = query.value(5).toInt();
-        session.maxIdleSeconds = query.value(6).toInt();
-        session.aiSummary = query.value(7).toString();
-        session.nextSuggestion = query.value(8).toString();
-        session.createdAt = QDateTime::fromString(query.value(9).toString(), Qt::ISODate);
+        session.aiSummary = query.value(5).toString();
+        session.nextSuggestion = query.value(6).toString();
+        session.createdAt = QDateTime::fromString(query.value(7).toString(), Qt::ISODate);
         sessions.append(session);
     }
     return sessions;
@@ -311,14 +303,9 @@ bool SQLiteStorage::ensureSchema() {
         "planned_minutes INTEGER NOT NULL,"
         "actual_minutes INTEGER NOT NULL,"
         "distraction_count INTEGER NOT NULL,"
-        "input_activity_count INTEGER NOT NULL DEFAULT 0,"
-        "max_idle_seconds INTEGER NOT NULL DEFAULT 0,"
         "ai_summary TEXT,"
         "next_suggestion TEXT,"
         "created_at TEXT NOT NULL)");
-
-    query.exec("ALTER TABLE focus_sessions ADD COLUMN input_activity_count INTEGER NOT NULL DEFAULT 0");
-    query.exec("ALTER TABLE focus_sessions ADD COLUMN max_idle_seconds INTEGER NOT NULL DEFAULT 0");
 
     const bool petOk = query.exec(
         "CREATE TABLE IF NOT EXISTS pet_profile ("

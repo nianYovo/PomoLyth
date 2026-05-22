@@ -14,8 +14,6 @@ enum class AppEventType {
     BreakStarted,
     BreakFinished,
     DistractionDetected,
-    InputActivityDetected,
-    InputIdleDetected,
     ReviewSubmitted,
     AiPlanGenerated,
     AiReviewGenerated,

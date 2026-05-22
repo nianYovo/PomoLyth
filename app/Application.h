@@ -14,7 +14,6 @@
 #include "core/PetStateMachine.h"
 #include "core/PomodoroTimer.h"
 #include "monitor/FocusMonitor.h"
-#include "monitor/InputActivityMonitor.h"
 #include "storage/JsonStorage.h"
 #include "storage/SQLiteStorage.h"
 #include "ui/MainWindow.h"
@@ -28,6 +27,7 @@ public:
     void show();
 
 private:
+    void loadTheme();
     void setupTray();
     void setupNotifications();
     void setupAiClient();
@@ -42,7 +42,6 @@ private:
     AppConfig m_config;
     AchievementSystem m_achievementSystem;
     std::unique_ptr<FocusMonitor> m_focusMonitor;
-    std::unique_ptr<InputActivityMonitor> m_inputActivityMonitor;
     std::unique_ptr<FocusSessionManager> m_sessionManager;
     std::unique_ptr<PetStateMachine> m_petStateMachine;
     std::unique_ptr<MainWindow> m_mainWindow;

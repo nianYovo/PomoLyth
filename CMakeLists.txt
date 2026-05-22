@@ -47,8 +47,6 @@ qt_add_executable(PomoLyth
     monitor/WindowsWindowMonitor.cpp
     monitor/FocusMonitor.h
     monitor/FocusMonitor.cpp
-    monitor/InputActivityMonitor.h
-    monitor/InputActivityMonitor.cpp
     storage/SQLiteStorage.h
     storage/SQLiteStorage.cpp
     storage/JsonStorage.h
@@ -73,6 +71,12 @@ qt_add_executable(PomoLyth
 
 target_include_directories(PomoLyth PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(PomoLyth PRIVATE Qt6::Widgets Qt6::Sql Qt6::Network Qt6::Concurrent)
+
+add_custom_command(TARGET PomoLyth POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:PomoLyth>/ui"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/ui/pink_theme.qss"
+        "$<TARGET_FILE_DIR:PomoLyth>/ui/pink_theme.qss")
 
 if(WIN32)
     target_link_libraries(PomoLyth PRIVATE psapi)

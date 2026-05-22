@@ -9,7 +9,6 @@ FocusSessionManager::FocusSessionManager(
     TaskPlanner& taskPlanner,
     ReviewGenerator& reviewGenerator,
     FocusMonitor& focusMonitor,
-    InputActivityMonitor& inputActivityMonitor,
     SQLiteStorage& storage,
     AchievementSystem& achievementSystem,
     QObject* parent)
@@ -19,7 +18,6 @@ FocusSessionManager::FocusSessionManager(
       m_taskPlanner(taskPlanner),
       m_reviewGenerator(reviewGenerator),
       m_focusMonitor(focusMonitor),
-      m_inputActivityMonitor(inputActivityMonitor),
       m_storage(storage),
       m_achievementSystem(achievementSystem),
       m_petProfile(storage.loadPetProfile()) {
@@ -75,7 +73,6 @@ void FocusSessionManager::startSession(const FocusTask& task) {
     m_hasActiveSession = true;
 
     m_focusMonitor.startMonitoring();
-    m_inputActivityMonitor.startMonitoring();
     m_timer.start(task.estimatedMinutes);
 
     AppEvent event;
@@ -100,7 +97,6 @@ void FocusSessionManager::resumeSession() {
 
 void FocusSessionManager::cancelSession() {
     m_focusMonitor.stopMonitoring();
-    m_inputActivityMonitor.stopMonitoring();
     m_timer.stop();
     m_hasActiveSession = false;
 
@@ -180,8 +176,6 @@ void FocusSessionManager::submitReviewAsync(const QStringList& completedGoals, c
     auto* watcher = new QFutureWatcher<FocusSession>(this);
     connect(watcher, &QFutureWatcher<FocusSession>::finished, this, [this, watcher]() {
         m_currentSession = watcher->result();
-        m_currentSession.keyboardMouseActivityCount = m_inputActivityMonitor.activityCount();
-        m_currentSession.maxIdleSeconds = m_inputActivityMonitor.maxIdleSeconds();
         watcher->deleteLater();
         m_aiBusy = false;
 
@@ -266,11 +260,8 @@ void FocusSessionManager::onTimerCompleted() {
     }
 
     m_focusMonitor.stopMonitoring();
-    m_inputActivityMonitor.stopMonitoring();
     m_currentSession.actualMinutes = m_currentSession.plannedMinutes;
     m_currentSession.distractionCount = m_focusMonitor.events().size();
-    m_currentSession.keyboardMouseActivityCount = m_inputActivityMonitor.activityCount();
-    m_currentSession.maxIdleSeconds = m_inputActivityMonitor.maxIdleSeconds();
     m_hasActiveSession = false;
 
     AppEvent event;

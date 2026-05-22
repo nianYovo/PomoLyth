@@ -16,6 +16,7 @@
   "C_Cpp.errorSquiggles": "enabled",
   "files.associations": {
     "*.h": "cpp",
-    "*.cpp": "cpp"
+    "*.cpp": "cpp",
+    "*.qss": "plaintext"
   }
 }

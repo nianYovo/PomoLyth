@@ -63,9 +63,6 @@ void PetStateMachine::handleEvent(const AppEvent& event) {
             setMood(PetMood::Worried, FocusState::Distracted, "你是不是跑偏啦？先撑完这一小段。");
         }
         break;
-    case AppEventType::InputIdleDetected:
-        setMood(PetMood::Worried, FocusState::Distracted, "你已经安静一会儿了，还在专注吗？");
-        break;
     case AppEventType::PetLevelUp:
         setMood(PetMood::Proud, m_focusState, "升级了！长期坚持真的会留下痕迹。");
         break;

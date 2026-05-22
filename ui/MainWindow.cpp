@@ -3,12 +3,17 @@
 #include <QApplication>
 #include <QCloseEvent>
 #include <QFrame>
+#include <QGraphicsDropShadowEffect>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QProgressBar>
+#include <QPushButton>
+#include <QSizePolicy>
 #include <QSplitter>
 #include <QTextEdit>
+#include <QTextDocument>
 #include <QTimer>
 #include <QVBoxLayout>
 #include "ui/DashboardWindow.h"
@@ -18,6 +23,14 @@
 #include "ui/SettingsDialog.h"
 #include "ui/TimerPanel.h"
 
+static void addSoftShadow(QWidget* widget, int blurRadius = 24) {
+    auto* shadow = new QGraphicsDropShadowEffect(widget);
+    shadow->setBlurRadius(blurRadius);
+    shadow->setOffset(0, 8);
+    shadow->setColor(QColor(255, 141, 179, 42));
+    widget->setGraphicsEffect(shadow);
+}
+
 MainWindow::MainWindow(
     FocusSessionManager& sessionManager,
     PomodoroTimer& timer,
@@ -25,7 +38,6 @@ MainWindow::MainWindow(
     SQLiteStorage& storage,
     JsonStorage& jsonStorage,
     FocusMonitor& focusMonitor,
-    InputActivityMonitor& inputActivityMonitor,
     ReviewGenerator& reviewGenerator,
     const AppConfig& config,
     QWidget* parent)
@@ -36,7 +48,6 @@ MainWindow::MainWindow(
       m_storage(storage),
       m_jsonStorage(jsonStorage),
       m_focusMonitor(focusMonitor),
-      m_inputActivityMonitor(inputActivityMonitor),
       m_reviewGenerator(reviewGenerator),
       m_config(config),
       m_blacklist(jsonStorage.loadBlacklist()),
@@ -92,12 +103,6 @@ MainWindow::MainWindow(
     connect(&m_sessionManager, &FocusSessionManager::breakFinished, this, [this]() {
         m_statusLabel->setText("短休息结束，可以准备下一轮。");
     });
-    connect(&m_inputActivityMonitor, &InputActivityMonitor::activityChanged, this, [this](int count, int idleSeconds) {
-        m_statusLabel->setText(QString("键鼠活动：%1 次，当前空闲：%2 秒").arg(count).arg(idleSeconds));
-    });
-    connect(&m_inputActivityMonitor, &InputActivityMonitor::idleWarning, this, [this](int idleSeconds) {
-        m_statusLabel->setText(QString("已经 %1 秒没有键盘或鼠标输入，还在专注吗？").arg(idleSeconds));
-    });
     connect(&m_petStateMachine, &PetStateMachine::moodChanged, m_petWidget, &PetWidget::setMood);
 
     QTimer::singleShot(300, this, [this]() {
@@ -107,31 +112,57 @@ MainWindow::MainWindow(
 
 void MainWindow::buildUi() {
     setWindowTitle("PomoLyth");
-    resize(1100, 680);
+    resize(1180, 700);
+    setMinimumSize(1100, 660);
 
     m_taskInput = new QLineEdit;
-    m_taskInput->setPlaceholderText("输入本轮任务，例如：复习 C++ STL 的 vector 和 map");
+    m_taskInput->setObjectName("taskInput");
+    m_taskInput->setPlaceholderText("写下这一轮的小目标，比如：复习 vector 和 map 🍓");
+    m_taskInput->setMaximumWidth(520);
+    m_taskInput->setMinimumHeight(42);
+    m_taskInput->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
     m_planView = new QTextEdit;
     m_planView->setReadOnly(true);
-    m_planView->setPlaceholderText("AI 任务计划会显示在这里。");
+    m_planView->setAcceptRichText(true);
+    m_planView->setMinimumHeight(250);
+    m_planView->setMaximumHeight(360);
+    m_planView->setObjectName("planView");
+    m_planView->document()->setDocumentMargin(14);
+    m_planView->setPlaceholderText("生成计划后，桌宠会把任务拆成温柔的小步骤。");
 
     m_statusLabel = new QLabel(QString("准备开始一轮专注。AI Provider：%1").arg(m_config.aiProvider));
+    m_statusLabel->setObjectName("statusLabel");
     m_statusLabel->setWordWrap(true);
+    m_statusLabel->setMinimumHeight(48);
     m_petProfileLabel = new QLabel;
     m_petProfileLabel->setObjectName("petProfileLabel");
     m_petProfileLabel->setWordWrap(true);
+    m_expProgress = new QProgressBar;
+    m_expProgress->setObjectName("expProgress");
+    m_expProgress->setRange(0, 100);
+    m_expProgress->setTextVisible(false);
 
     m_timerPanel = new TimerPanel;
+    m_timerPanel->setFixedSize(380, 350);
+    m_timerPanel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_petWidget = new PetWidget;
+    m_petWidget->setMaximumWidth(270);
     m_petWidget->setMood(m_petStateMachine.mood(), m_petStateMachine.speechText());
+
+    auto* taskPlanButton = new QPushButton("生成计划");
+    taskPlanButton->setProperty("buttonRole", "mint");
+    taskPlanButton->setMinimumHeight(42);
+    taskPlanButton->setFixedWidth(118);
+    taskPlanButton->setCursor(Qt::PointingHandCursor);
+    connect(taskPlanButton, &QPushButton::clicked, this, &MainWindow::requestPlan);
 
     auto* title = new QLabel("PomoLyth");
     title->setObjectName("appTitle");
-    auto* subtitle = new QLabel("和桌宠一起规划、专注、复盘、成长。");
+    auto* subtitle = new QLabel("和桌宠一起，把今天慢慢完成。");
     subtitle->setObjectName("appSubtitle");
 
-    auto* taskTitle = new QLabel("当前任务");
+    auto* taskTitle = new QLabel("今日小目标");
     taskTitle->setObjectName("sectionTitle");
     auto* planTitle = new QLabel("专注计划");
     planTitle->setObjectName("sectionTitle");
@@ -142,35 +173,57 @@ void MainWindow::buildUi() {
 
     auto* left = new QFrame;
     left->setObjectName("panel");
+    addSoftShadow(left);
     auto* leftLayout = new QVBoxLayout(left);
-    leftLayout->setContentsMargins(22, 22, 22, 22);
-    leftLayout->setSpacing(14);
+    leftLayout->setContentsMargins(28, 26, 28, 22);
+    leftLayout->setSpacing(12);
     leftLayout->addWidget(title);
     leftLayout->addWidget(subtitle);
-    leftLayout->addSpacing(8);
-    leftLayout->addWidget(taskTitle);
-    leftLayout->addWidget(m_taskInput);
-    leftLayout->addWidget(m_timerPanel);
-    leftLayout->addWidget(planTitle);
-    leftLayout->addWidget(m_planView, 1);
-    leftLayout->addWidget(m_statusLabel);
+    leftLayout->addSpacing(10);
+
+    auto* workRow = new QHBoxLayout;
+    workRow->setContentsMargins(0, 0, 0, 0);
+    workRow->setSpacing(24);
+
+    auto* workColumn = new QVBoxLayout;
+    workColumn->setContentsMargins(0, 0, 0, 0);
+    workColumn->setSpacing(12);
+    workColumn->addWidget(taskTitle);
+    auto* taskRow = new QHBoxLayout;
+    taskRow->setContentsMargins(0, 0, 0, 0);
+    taskRow->setSpacing(10);
+    taskRow->addWidget(m_taskInput);
+    taskRow->addWidget(taskPlanButton);
+    taskRow->addStretch();
+    workColumn->addLayout(taskRow);
+    workColumn->addWidget(planTitle);
+    workColumn->addWidget(m_planView, 1);
+    workColumn->addWidget(m_statusLabel);
+
+    workRow->addLayout(workColumn, 1);
+    workRow->addWidget(m_timerPanel, 0, Qt::AlignTop);
+    leftLayout->addLayout(workRow, 1);
 
     auto* right = new QFrame;
     right->setObjectName("sidePanel");
+    right->setMinimumWidth(286);
+    right->setMaximumWidth(310);
+    addSoftShadow(right);
     auto* rightLayout = new QVBoxLayout(right);
-    rightLayout->setContentsMargins(22, 22, 22, 22);
-    rightLayout->setSpacing(14);
+    rightLayout->setContentsMargins(24, 24, 24, 22);
+    rightLayout->setSpacing(12);
     rightLayout->addWidget(petTitle);
-    rightLayout->addWidget(m_petWidget, 1);
+    rightLayout->addWidget(m_petWidget, 1, Qt::AlignHCenter);
+    rightLayout->addStretch();
     rightLayout->addWidget(growthTitle);
     rightLayout->addWidget(m_petProfileLabel);
-    rightLayout->addStretch();
+    rightLayout->addWidget(m_expProgress);
 
     auto* root = new QWidget;
     root->setObjectName("root");
     auto* rootLayout = new QHBoxLayout(root);
-    rootLayout->setContentsMargins(20, 20, 20, 20);
-    rootLayout->setSpacing(18);
+    rootLayout->setContentsMargins(18, 18, 18, 18);
+    rootLayout->setSpacing(16);
     rootLayout->addWidget(left, 7);
     rootLayout->addWidget(right, 3);
 
@@ -179,22 +232,7 @@ void MainWindow::buildUi() {
 }
 
 void MainWindow::applyStyle() {
-    qApp->setStyleSheet(
-        "QMainWindow, #root { background: #eef3ea; color: #25302a; font-size: 14px; }"
-        "#panel, #sidePanel { background: #fbfcf7; border: 1px solid #d8e0d4; border-radius: 10px; }"
-        "#sidePanel { background: #f7faf4; }"
-        "#appTitle { font-size: 34px; font-weight: 800; color: #1f3d31; }"
-        "#appSubtitle { color: #667565; font-size: 14px; }"
-        "#sectionTitle { color: #345347; font-weight: 700; font-size: 15px; padding-top: 4px; }"
-        "QLineEdit, QTextEdit, QSpinBox, QTableWidget { background: #ffffff; border: 1px solid #cfd8cc; border-radius: 8px; padding: 9px; selection-background-color: #b8d8c8; }"
-        "QLineEdit:focus, QTextEdit:focus, QSpinBox:focus { border: 1px solid #4f8068; }"
-        "QPushButton { background: #335c4b; color: white; border: 0; border-radius: 8px; padding: 9px 13px; font-weight: 600; }"
-        "QPushButton:disabled { background: #aeb8ad; }"
-        "QPushButton:hover { background: #274739; }"
-        "QPushButton:pressed { background: #1f362c; }"
-        "#timeLabel { font-size: 54px; font-weight: 700; color: #20352b; }"
-        "#metricLabel, #petProfileLabel, #dailyReportLabel { background: #ffffff; border: 1px solid #d6ddd3; border-radius: 8px; padding: 12px; font-size: 14px; }"
-        "QSplitter::handle { background: transparent; }");
+    // Global styling is loaded from ui/pink_theme.qss during application startup.
 }
 
 void MainWindow::requestPlan() {
@@ -290,30 +328,59 @@ void MainWindow::showReview(const FocusSession& session) {
 
 void MainWindow::updatePlanView(const FocusTask& task) {
     m_currentTask = task;
-    QString text;
-    text += QString("任务：%1\n").arg(task.originalInput);
-    text += QString("预计：%1 分钟\n").arg(task.estimatedMinutes);
-    text += QString("难度：%1\n\n").arg(task.difficulty);
-    text += "本轮目标：\n";
-    for (const QString& goal : task.goals) {
-        text += QString("- %1\n").arg(goal);
-    }
-    text += "\n本轮避免：\n";
-    for (const QString& item : task.avoidList) {
-        text += QString("- %1\n").arg(item);
-    }
-    m_planView->setPlainText(text);
+
+    auto listHtml = [](const QStringList& items) {
+        QString html;
+        if (items.isEmpty()) {
+            return QString("<div class=\"empty\">暂无</div>");
+        }
+        html += "<ul>";
+        for (const QString& item : items) {
+            html += QString("<li>%1</li>").arg(item.toHtmlEscaped());
+        }
+        html += "</ul>";
+        return html;
+    };
+
+    QString html;
+    html += R"(
+        <style>
+            body { color: #3A2630; font-family: "Microsoft YaHei UI", "Segoe UI", Arial; font-size: 14px; }
+            .task { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+            .meta { margin-bottom: 14px; }
+            .pill { display: inline-block; color: #D95787; background: #FFF0F6; border: 1px solid #F3C7D8; border-radius: 10px; padding: 4px 9px; margin-right: 8px; font-weight: 700; }
+            .section { margin-top: 12px; padding-top: 8px; border-top: 1px solid #F6DCE6; }
+            .section-title { color: #8F3156; font-weight: 800; margin-bottom: 6px; }
+            ul { margin: 6px 0 0 18px; padding: 0; }
+            li { margin: 5px 0; line-height: 1.45; }
+            .empty { color: #8F7482; margin-top: 6px; }
+        </style>
+    )";
+    html += QString("<div class=\"task\">%1</div>").arg(task.originalInput.toHtmlEscaped());
+    html += "<div class=\"meta\">";
+    html += QString("<span class=\"pill\">预计 %1 分钟</span>").arg(task.estimatedMinutes);
+    html += QString("<span class=\"pill\">难度 %1</span>").arg(task.difficulty.toHtmlEscaped());
+    html += "</div>";
+    html += "<div class=\"section\"><div class=\"section-title\">本轮目标</div>";
+    html += listHtml(task.goals);
+    html += "</div>";
+    html += "<div class=\"section\"><div class=\"section-title\">本轮避免</div>";
+    html += listHtml(task.avoidList);
+    html += "</div>";
+
+    m_planView->setHtml(html);
     m_statusLabel->setText("计划已生成，可以开始专注。");
 }
 
 void MainWindow::updatePetProfileView() {
     const PetProfile profile = m_sessionManager.petProfile();
-    m_petProfileLabel->setText(QString("桌宠 Lv.%1  EXP %2/100  亲密度 %3  累计专注 %4 分钟  番茄轮数 %5")
+    m_petProfileLabel->setText(QString("Lv.%1  🍓 EXP %2/100\n♥ 亲密度 %3\n累计专注 %4 分钟\n🍅 番茄轮数 %5")
         .arg(profile.level)
         .arg(profile.exp % 100)
         .arg(profile.intimacy)
         .arg(profile.totalFocusMinutes)
         .arg(profile.completedPomodoros));
+    m_expProgress->setValue(profile.exp % 100);
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {

@@ -9,7 +9,6 @@
 #include "core/PomodoroTimer.h"
 #include "models/PetProfile.h"
 #include "monitor/FocusMonitor.h"
-#include "monitor/InputActivityMonitor.h"
 #include "storage/SQLiteStorage.h"
 
 class FocusSessionManager : public QObject {
@@ -22,7 +21,6 @@ public:
         TaskPlanner& taskPlanner,
         ReviewGenerator& reviewGenerator,
         FocusMonitor& focusMonitor,
-        InputActivityMonitor& inputActivityMonitor,
         SQLiteStorage& storage,
         AchievementSystem& achievementSystem,
         QObject* parent = nullptr);
@@ -59,7 +57,6 @@ private:
     TaskPlanner& m_taskPlanner;
     ReviewGenerator& m_reviewGenerator;
     FocusMonitor& m_focusMonitor;
-    InputActivityMonitor& m_inputActivityMonitor;
     SQLiteStorage& m_storage;
     AchievementSystem& m_achievementSystem;
     FocusTask m_currentTask;

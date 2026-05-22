@@ -1,15 +1,20 @@
 #include "ui/DashboardWindow.h"
 
+#include <QAbstractItemView>
+#include <QColor>
 #include <QFile>
 #include <QFileDialog>
 #include <QFutureWatcher>
+#include <QFrame>
 #include <QGridLayout>
+#include <QGraphicsDropShadowEffect>
 #include <QHeaderView>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
-#include <QTextStream>
 #include <QTableWidget>
+#include <QTextStream>
 #include <QVBoxLayout>
 #include <QtConcurrent>
 
@@ -17,7 +22,61 @@ static QLabel* metricLabel(const QString& title) {
     auto* label = new QLabel(QString("%1\n0").arg(title));
     label->setAlignment(Qt::AlignCenter);
     label->setObjectName("metricLabel");
+    label->setMinimumSize(138, 82);
     return label;
+}
+
+static QLabel* sectionTitle(const QString& title) {
+    auto* label = new QLabel(title);
+    label->setObjectName("sectionTitle");
+    return label;
+}
+
+static QFrame* reportCard(const QString& title, QLabel* content) {
+    auto* card = new QFrame;
+    card->setObjectName("reportCard");
+
+    auto* titleLabel = sectionTitle(title);
+    content->setObjectName("reportText");
+    content->setMinimumHeight(74);
+
+    auto* layout = new QVBoxLayout(card);
+    layout->setContentsMargins(16, 14, 16, 16);
+    layout->setSpacing(8);
+    layout->addWidget(titleLabel);
+    layout->addWidget(content, 1);
+    return card;
+}
+
+static void addSoftShadow(QWidget* widget, int blurRadius = 18) {
+    auto* shadow = new QGraphicsDropShadowEffect(widget);
+    shadow->setBlurRadius(blurRadius);
+    shadow->setOffset(0, 6);
+    shadow->setColor(QColor(255, 141, 179, 36));
+    widget->setGraphicsEffect(shadow);
+}
+
+static void prepareTable(QTableWidget* table) {
+    table->setObjectName("dataTable");
+    table->setAlternatingRowColors(false);
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    table->setShowGrid(false);
+    table->verticalHeader()->setVisible(false);
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table->setMinimumHeight(112);
+    table->setMaximumHeight(152);
+    table->verticalHeader()->setDefaultSectionSize(38);
+    table->horizontalHeader()->setFixedHeight(40);
+}
+
+static void setEmptyTableMessage(QTableWidget* table, int columns) {
+    table->clearSpans();
+    table->setRowCount(1);
+    table->setSpan(0, 0, 1, columns);
+    auto* item = new QTableWidgetItem("还没有记录。完成一轮番茄后，这里会长出你的专注足迹 🌱");
+    item->setTextAlignment(Qt::AlignCenter);
+    item->setFlags(Qt::ItemIsEnabled);
+    table->setItem(0, 0, item);
 }
 
 static QString csvEscape(QString value) {
@@ -30,21 +89,30 @@ static QString csvEscape(QString value) {
 
 DashboardWindow::DashboardWindow(SQLiteStorage& storage, ReviewGenerator& reviewGenerator, QWidget* parent)
     : QWidget(parent), m_storage(storage), m_reviewGenerator(reviewGenerator), m_userMemory(storage) {
+    setObjectName("dashboardWindow");
     setWindowTitle("PomoLyth 数据面板");
-    resize(820, 620);
+    resize(860, 660);
 
     m_todayMinutes = metricLabel("今日分钟");
     m_todayPomodoros = metricLabel("今日番茄");
     m_weekMinutes = metricLabel("近 7 天分钟");
     m_averageDistractions = metricLabel("平均分心");
     m_commonDistraction = metricLabel("常见来源");
+    for (auto* label : {m_todayMinutes, m_todayPomodoros, m_weekMinutes, m_averageDistractions, m_commonDistraction}) {
+        addSoftShadow(label);
+    }
 
     auto* metrics = new QGridLayout;
+    metrics->setHorizontalSpacing(12);
+    metrics->setVerticalSpacing(12);
     metrics->addWidget(m_todayMinutes, 0, 0);
     metrics->addWidget(m_todayPomodoros, 0, 1);
     metrics->addWidget(m_weekMinutes, 0, 2);
-    metrics->addWidget(m_averageDistractions, 0, 3);
-    metrics->addWidget(m_commonDistraction, 0, 4);
+    metrics->addWidget(m_averageDistractions, 1, 0);
+    metrics->addWidget(m_commonDistraction, 1, 1, 1, 2);
+    for (int column = 0; column < 3; ++column) {
+        metrics->setColumnStretch(column, 1);
+    }
 
     m_dailyReport = new QLabel("今日报告尚未生成。");
     m_dailyReport->setObjectName("dailyReportLabel");
@@ -52,8 +120,11 @@ DashboardWindow::DashboardWindow(SQLiteStorage& storage, ReviewGenerator& review
     m_userMemoryLabel = new QLabel("长期记忆正在等待更多记录。");
     m_userMemoryLabel->setObjectName("dailyReportLabel");
     m_userMemoryLabel->setWordWrap(true);
+
     m_dailyReportButton = new QPushButton("生成今日报告");
+    m_dailyReportButton->setProperty("buttonRole", "primary");
     m_exportButton = new QPushButton("导出 CSV");
+    m_exportButton->setProperty("buttonRole", "outline");
 
     connect(m_dailyReportButton, &QPushButton::clicked, this, [this]() {
         const QVector<FocusSession> sessions = m_storage.todaySessions();
@@ -76,38 +147,45 @@ DashboardWindow::DashboardWindow(SQLiteStorage& storage, ReviewGenerator& review
     });
     connect(m_exportButton, &QPushButton::clicked, this, &DashboardWindow::exportCsv);
 
-    m_table = new QTableWidget(0, 7);
-    m_table->setHorizontalHeaderLabels({"时间", "任务", "计划", "实际", "分心", "键鼠活动", "最长空闲"});
+    m_table = new QTableWidget(0, 5);
+    prepareTable(m_table);
+    m_table->setHorizontalHeaderLabels({"时间", "任务", "计划", "实际", "分心"});
     m_table->horizontalHeader()->setStretchLastSection(true);
     m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
-    m_table->verticalHeader()->setVisible(false);
-    m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     m_distractionTable = new QTableWidget(0, 4);
+    prepareTable(m_distractionTable);
     m_distractionTable->setHorizontalHeaderLabels({"时间", "进程", "窗口", "等级"});
     m_distractionTable->horizontalHeader()->setStretchLastSection(true);
     m_distractionTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
-    m_distractionTable->verticalHeader()->setVisible(false);
-    m_distractionTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     m_achievementTable = new QTableWidget(0, 2);
+    prepareTable(m_achievementTable);
     m_achievementTable->setHorizontalHeaderLabels({"时间", "成就"});
     m_achievementTable->horizontalHeader()->setStretchLastSection(true);
     m_achievementTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
-    m_achievementTable->verticalHeader()->setVisible(false);
-    m_achievementTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+    auto* buttonRow = new QHBoxLayout;
+    buttonRow->setSpacing(10);
+    buttonRow->addWidget(m_dailyReportButton);
+    buttonRow->addWidget(m_exportButton);
+    buttonRow->addStretch();
 
     auto* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(20, 20, 20, 20);
+    layout->setSpacing(14);
     layout->addLayout(metrics);
-    layout->addWidget(m_dailyReportButton);
-    layout->addWidget(m_exportButton);
-    layout->addWidget(m_userMemoryLabel);
-    layout->addWidget(m_dailyReport);
-    layout->addWidget(new QLabel("最近专注记录"));
+    layout->addLayout(buttonRow);
+    auto* reportRow = new QHBoxLayout;
+    reportRow->setSpacing(14);
+    reportRow->addWidget(reportCard("今日复盘小纸条", m_dailyReport));
+    reportRow->addWidget(reportCard("长期记忆", m_userMemoryLabel));
+    layout->addLayout(reportRow);
+    layout->addWidget(sectionTitle("最近专注记录"));
     layout->addWidget(m_table);
-    layout->addWidget(new QLabel("最近分心记录"));
+    layout->addWidget(sectionTitle("最近分心记录"));
     layout->addWidget(m_distractionTable);
-    layout->addWidget(new QLabel("最近解锁成就"));
+    layout->addWidget(sectionTitle("最近解锁成就"));
     layout->addWidget(m_achievementTable);
 
     refresh();
@@ -130,6 +208,7 @@ void DashboardWindow::refresh() {
     }
 
     const QVector<FocusSession> sessions = m_storage.recentSessions();
+    m_table->clearSpans();
     m_table->setRowCount(sessions.size());
     for (int row = 0; row < sessions.size(); ++row) {
         const FocusSession& session = sessions[row];
@@ -138,11 +217,15 @@ void DashboardWindow::refresh() {
         m_table->setItem(row, 2, new QTableWidgetItem(QString::number(session.plannedMinutes)));
         m_table->setItem(row, 3, new QTableWidgetItem(QString::number(session.actualMinutes)));
         m_table->setItem(row, 4, new QTableWidgetItem(QString::number(session.distractionCount)));
-        m_table->setItem(row, 5, new QTableWidgetItem(QString::number(session.keyboardMouseActivityCount)));
-        m_table->setItem(row, 6, new QTableWidgetItem(QString("%1 秒").arg(session.maxIdleSeconds)));
+        m_table->setRowHeight(row, 38);
+    }
+    if (sessions.isEmpty()) {
+        setEmptyTableMessage(m_table, 5);
+        m_table->setRowHeight(0, 72);
     }
 
     const QVector<DistractionEvent> distractions = m_storage.recentDistractions();
+    m_distractionTable->clearSpans();
     m_distractionTable->setRowCount(distractions.size());
     for (int row = 0; row < distractions.size(); ++row) {
         const DistractionEvent& event = distractions[row];
@@ -150,13 +233,24 @@ void DashboardWindow::refresh() {
         m_distractionTable->setItem(row, 1, new QTableWidgetItem(event.processName));
         m_distractionTable->setItem(row, 2, new QTableWidgetItem(event.windowTitle));
         m_distractionTable->setItem(row, 3, new QTableWidgetItem(QString::number(event.severity)));
+        m_distractionTable->setRowHeight(row, 38);
+    }
+    if (distractions.isEmpty()) {
+        setEmptyTableMessage(m_distractionTable, 4);
+        m_distractionTable->setRowHeight(0, 72);
     }
 
     const QVector<QPair<QString, QDateTime>> achievements = m_storage.recentAchievements();
+    m_achievementTable->clearSpans();
     m_achievementTable->setRowCount(achievements.size());
     for (int row = 0; row < achievements.size(); ++row) {
         m_achievementTable->setItem(row, 0, new QTableWidgetItem(achievements[row].second.toString("MM-dd HH:mm")));
         m_achievementTable->setItem(row, 1, new QTableWidgetItem(achievements[row].first));
+        m_achievementTable->setRowHeight(row, 38);
+    }
+    if (achievements.isEmpty()) {
+        setEmptyTableMessage(m_achievementTable, 2);
+        m_achievementTable->setRowHeight(0, 72);
     }
 }
 
@@ -178,15 +272,13 @@ void DashboardWindow::exportCsv() {
 
     QTextStream out(&file);
     out.setEncoding(QStringConverter::Utf8);
-    out << "created_at,task,planned_minutes,actual_minutes,distraction_count,input_activity_count,max_idle_seconds,ai_summary,next_suggestion\n";
+    out << "created_at,task,planned_minutes,actual_minutes,distraction_count,ai_summary,next_suggestion\n";
     for (const FocusSession& session : m_storage.allSessions()) {
         out << csvEscape(session.createdAt.toString(Qt::ISODate)) << ','
             << csvEscape(session.task) << ','
             << session.plannedMinutes << ','
             << session.actualMinutes << ','
             << session.distractionCount << ','
-            << session.keyboardMouseActivityCount << ','
-            << session.maxIdleSeconds << ','
             << csvEscape(session.aiSummary) << ','
             << csvEscape(session.nextSuggestion) << '\n';
     }

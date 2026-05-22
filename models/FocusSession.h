@@ -10,8 +10,6 @@ struct FocusSession {
     int plannedMinutes = 25;
     int actualMinutes = 0;
     int distractionCount = 0;
-    int keyboardMouseActivityCount = 0;
-    int maxIdleSeconds = 0;
     QStringList completedGoals;
     QStringList problems;
     QString aiSummary;

@@ -2,9 +2,13 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QCoreApplication>
+#include <QDir>
+#include <QFile>
 #include <QMenu>
 #include <QMessageBox>
 #include <QStyle>
+#include <QTextStream>
 #include "monitor/WindowsWindowMonitor.h"
 
 Application::Application(QObject* parent)
@@ -16,6 +20,8 @@ Application::Application(QObject* parent)
       m_achievementSystem(this) {}
 
 bool Application::initialize() {
+    loadTheme();
+
     if (!m_storage.open()) {
         QMessageBox::critical(nullptr, "PomoLyth", "Failed to open local SQLite database.");
         return false;
@@ -30,7 +36,6 @@ bool Application::initialize() {
     m_focusMonitor->setIntervalSeconds(m_config.focusMonitorIntervalSeconds);
     m_focusMonitor->setBlacklist(m_jsonStorage.loadBlacklist());
     m_focusMonitor->setWhitelist(m_jsonStorage.loadWhitelist());
-    m_inputActivityMonitor = std::make_unique<InputActivityMonitor>(m_eventBus);
 
     m_sessionManager = std::make_unique<FocusSessionManager>(
         m_eventBus,
@@ -38,7 +43,6 @@ bool Application::initialize() {
         *m_taskPlanner,
         *m_reviewGenerator,
         *m_focusMonitor,
-        *m_inputActivityMonitor,
         m_storage,
         m_achievementSystem);
     m_sessionManager->setBreakMinutes(m_config.defaultBreakMinutes);
@@ -52,13 +56,31 @@ bool Application::initialize() {
         m_storage,
         m_jsonStorage,
         *m_focusMonitor,
-        *m_inputActivityMonitor,
         *m_reviewGenerator,
         m_config);
 
     setupTray();
     setupNotifications();
     return true;
+}
+
+void Application::loadTheme() {
+    const QStringList themePaths = {
+        QDir(QCoreApplication::applicationDirPath()).filePath("ui/pink_theme.qss"),
+        QDir::current().filePath("ui/pink_theme.qss"),
+    };
+
+    for (const QString& path : themePaths) {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            continue;
+        }
+
+        QTextStream stream(&file);
+        stream.setEncoding(QStringConverter::Utf8);
+        qApp->setStyleSheet(stream.readAll());
+        return;
+    }
 }
 
 void Application::show() {
@@ -132,9 +154,6 @@ void Application::setupNotifications() {
             break;
         case AppEventType::DistractionDetected:
             m_trayIcon->showMessage("PomoLyth", QString("检测到可能分心：%1").arg(event.payload), QSystemTrayIcon::Warning, 3000);
-            break;
-        case AppEventType::InputIdleDetected:
-            m_trayIcon->showMessage("PomoLyth", QString("已经 %1 秒没有键盘或鼠标输入。").arg(event.payload), QSystemTrayIcon::Warning, 3000);
             break;
         case AppEventType::TimerCompleted:
             m_trayIcon->showMessage("PomoLyth", "计时结束，记得做一次简短复盘。", QSystemTrayIcon::Information, 3000);
